@@ -429,15 +429,9 @@ class FrontEnd(mp.Process):
             gt_img = self.cameras[cur_frame_idx].original_image.cuda()
             valid_rgb = (gt_img.sum(dim=0) > rgb_boundary_threshold)[None]
 
-            # get depth median 1
+            # get depth median
             vo_initial_depth, std, valid_mask = \
                 get_median_depth(1 / render_pkg["depth"], render_pkg["opacity"], mask=valid_rgb, return_std=True)
-            
-            # get depth median 2
-            # vo_initial_depth = torch.median(1 / render_pkg["depth"])
-            
-            # get depth median 3
-            # vo_initial_depth = torch.median(self.vo_patches_[self.vo_n-3:self.vo_n,:,2])
 
             patches[:,:,2] = vo_initial_depth
             self.vo_patches_[self.vo_n] = patches
@@ -465,42 +459,6 @@ class FrontEnd(mp.Process):
 
         sparse_depth = self.get_sparse_depth(index[0])
         opt_dense_depth = optimize_depth(sparse_depth, prior_dense_depth)
-
-
-        # viz
-        # dense_image = (self.cameras[index[0]].original_image * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy()
-        # dense_depth = o3d.geometry.Image(opt_dense_depth.astype(np.float32))
-        # dense_image = o3d.geometry.Image(dense_image.astype(np.uint8))
-        # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(dense_image, 
-        #                                                                 dense_depth,
-        #                                                                 depth_scale=1.0,
-        #                                                                 depth_trunc=100.0,
-        #                                                                 convert_rgb_to_intensity=False)
-        # Intrinsic = o3d.camera.PinholeCameraIntrinsic(
-        #     self.cameras[index[0]].image_width,
-        #     self.cameras[index[0]].image_height,
-        #     self.cameras[index[0]].fx,
-        #     self.cameras[index[0]].fy,
-        #     self.cameras[index[0]].cx,
-        #     self.cameras[index[0]].cy,
-        # )
-        # sparse_depth_image = o3d.geometry.Image(sparse_depth.astype(np.float32))
-        # dense_pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
-        #     rgbd_image,
-        #     Intrinsic,
-        #     # extrinsic=W2C,
-        #     project_valid_depth_only=True,
-        # )
-        # sparse_depth_pcd = o3d.geometry.PointCloud.create_from_depth_image(
-        #     sparse_depth_image,
-        #     Intrinsic
-        # )
-        # if cur_frame_idx % 100 == 0:        
-        #     o3d.visualization.draw_geometries([sparse_depth_pcd, dense_pcd],
-        #                                     zoom=0.3412,
-        #                                     front=[0.4257, -0.2125, -0.8795],
-        #                                     lookat=[2.6172, 2.0475, 1.532],
-        #                                     up=[-0.0694, -0.9768, 0.2024])
 
         self.cameras[index[0]].depth = opt_dense_depth
 
