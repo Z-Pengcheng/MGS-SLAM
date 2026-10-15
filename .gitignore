@@ -1,0 +1,14 @@
+# datasets
+datasets/
+
+# results
+results/
+
+# fast-mvsnet-weights
+weights/fast-mvsnet.ckpt
+
+# project
+.vscode
+
+# python
+__pycache__

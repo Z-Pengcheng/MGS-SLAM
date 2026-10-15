@@ -1,0 +1,4 @@
+inherit_from: "configs/mono/replica/base_config.yaml"
+Dataset:
+  dataset_path: "datasets/Replica/room0/"
+  single_thread: False
