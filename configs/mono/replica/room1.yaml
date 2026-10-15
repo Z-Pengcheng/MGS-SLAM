@@ -1,0 +1,7 @@
+inherit_from: "configs/mono/replica/base_config.yaml"
+Dataset:
+  dataset_path: "datasets/Replica/room1/"
+  single_thread: False
+
+# sparse_vo:
+#   vo_initial_depth: 2.0

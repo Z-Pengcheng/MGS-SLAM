@@ -1,0 +1,4 @@
+inherit_from: "configs/mono/icl_nuim/base_config.yaml"
+Dataset:
+  dataset_path: "datasets/icl-nuim/traj1_frei_png/"
+  single_thread: False
