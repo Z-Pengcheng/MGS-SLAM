@@ -1,26 +1,40 @@
 name: MGS-SLAM
 channels:
   - pytorch
+  - nvidia
   - conda-forge
   - defaults
 dependencies:
-  - cudatoolkit=11.6
+  - pytorch-cuda=11.7
   - plyfile=0.8.1
-  - python=3.7.13
-  - pip=22.3.1
-  - pytorch=1.12.1
-  - torchaudio=0.12.1
-  - torchvision=0.13.1
+  - python=3.10
+  - pip=24.2
+  - setuptools==75.1.0
+  - pytorch=1.13.1
+  - torchaudio=0.13.1
+  - torchvision=0.14.1
+  - pytorch-lightning=1.9.5
+  - numpy=1.26.4
+  - scipy=1.15.3
+  - pillow=11.0.0
   - tqdm
   - pip:
     - submodules/simple-knn
     - submodules/diff-gaussian-rasterization
+    - submodules/Fast-MVSNet
+    - submodules/dpvo
     - opencv-python==4.8.1.78
-    - munch
-    - trimesh
     - evo==1.11.0
     - open3d==0.17.0
-    - torchmetrics
+    - torchmetrics==1.5.2
+    - kornia==0.6.8
+    - timm==0.9.16
+    - inplace-abn==1.0.12
+    - triton==3.7.0
+    - torch-scatter==2.1.2
+    - matplotlib==3.7.5
+    - munch
+    - trimesh
     - imgviz
     - PyOpenGL
     - glfw
@@ -29,3 +43,4 @@ dependencies:
     - lpips
     - rich
     - ruff
+    - yacs
