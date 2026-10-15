@@ -1,6 +1,6 @@
 # MGS-SLAM: Monocular Sparse Tracking and Gaussian Mapping with Depth Smooth Regularization
 
-<h3 align="center"><strong>IEEE Robotics and Automation Letters (RA-L), 2025</strong></h3>
+<h3 align="center"><strong>IEEE Robotics and Automation Letters (RA-L), 2024</strong></h3>
 
 <h3 align="center"><a href="https://ieeexplore.ieee.org/document/10679906/">Paper</a> | <a href="https://arxiv.org/abs/2405.06241">ArXiv</a> | <a href="https://www.bilibili.com/video/BV1zM4m1C761">Bilibili</a> | <a href="https://youtu.be/twwELF3LgZs">YouTube</a></h3>
 
