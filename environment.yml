@@ -19,6 +19,7 @@ dependencies:
   - pillow=11.0.0
   - tqdm
   - pip:
+    - gdown
     - submodules/simple-knn
     - submodules/diff-gaussian-rasterization
     - submodules/Fast-MVSNet
