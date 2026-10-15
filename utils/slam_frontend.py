@@ -61,6 +61,7 @@ class FrontEnd(mp.Process):
         self.save_results = self.config["Results"]["save_results"]
         self.save_trj = self.config["Results"]["save_trj"]
         self.save_trj_kf_intv = self.config["Results"]["save_trj_kf_intv"]
+        self.eval_rendering = self.config["Results"]["eval_rendering"]
 
         self.tracking_itr_num = self.config["Training"]["tracking_itr_num"]
         self.kf_interval = self.config["Training"]["kf_interval"]
@@ -663,7 +664,7 @@ class FrontEnd(mp.Process):
             if self.frontend_queue.empty():
                 tic.record()
                 if cur_frame_idx >= len(self.dataset):
-                    if self.save_results:
+                    if self.save_results and not self.eval_rendering:
                         eval_ate(
                             self.cameras,
                             self.map_kf_indices,
@@ -708,6 +709,10 @@ class FrontEnd(mp.Process):
                 # Tracking
                 keyframe_idx = self.vo_tracking(cur_frame_idx)
                 create_kf_vo = self.vo_keyframe()
+                if not create_kf_vo:
+                    self.cleanup(keyframe_idx)
+                    cur_frame_idx += 1
+                    continue
 
                 current_window_dict = {}
                 current_window_dict[self.current_window[0]] = self.current_window[1:]
@@ -768,13 +773,12 @@ class FrontEnd(mp.Process):
                         keyframe_idx, self.cameras[keyframe_idx], self.current_window, depth_map
                     )
 
-                if create_kf_vo == False and create_kf_map == False:
-                    self.cleanup(keyframe_idx)
                 cur_frame_idx += 1
 
                 if (
                     self.save_results
                     and self.save_trj
+                    and not self.eval_rendering
                     and create_kf_map
                     and len(self.map_kf_indices) > 10
                     # and len(self.map_kf_indices) % self.save_trj_kf_intv == 0

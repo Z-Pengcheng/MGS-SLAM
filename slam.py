@@ -110,42 +110,9 @@ class SLAM:
         # empty the frontend queue
         N_frames = len(self.frontend.cameras)
         FPS = N_frames / (start.elapsed_time(end) * 0.001)
-        Log("Total time", start.elapsed_time(end) * 0.001, tag="Eval")
-        Log("Total FPS", N_frames / (start.elapsed_time(end) * 0.001), tag="Eval")
 
         if self.eval_rendering:
-            self.gaussians = self.frontend.gaussians
             kf_indices = self.frontend.map_kf_indices
-            ATE = eval_ate(
-                self.frontend.cameras,
-                self.frontend.map_kf_indices,
-                self.save_dir,
-                0,
-                final=True,
-                monocular=self.monocular,
-            )
-
-            rendering_result = eval_rendering(
-                self.frontend.cameras,
-                self.gaussians,
-                self.dataset,
-                self.save_dir,
-                self.pipeline_params,
-                self.background,
-                kf_indices=kf_indices,
-                iteration="before_opt",
-            )
-            columns = ["tag", "psnr", "ssim", "lpips", "RMSE ATE", "FPS"]
-            metrics_table = wandb.Table(columns=columns)
-            metrics_table.add_data(
-                "Before",
-                rendering_result["mean_psnr"],
-                rendering_result["mean_ssim"],
-                rendering_result["mean_lpips"],
-                ATE,
-                FPS,
-            )
-
             # re-used the frontend queue to retrive the gaussians from the backend.
             while not frontend_queue.empty():
                 frontend_queue.get()
@@ -160,6 +127,14 @@ class SLAM:
                     self.gaussians = gaussians
                     break
 
+            ATE = eval_ate(
+                self.frontend.cameras,
+                kf_indices,
+                self.save_dir,
+                0,
+                final=True,
+                monocular=self.monocular,
+            )
             rendering_result = eval_rendering(
                 self.frontend.cameras,
                 self.gaussians,
@@ -168,10 +143,12 @@ class SLAM:
                 self.pipeline_params,
                 self.background,
                 kf_indices=kf_indices,
-                iteration="after_opt",
+                iteration="final",
             )
+            columns = ["tag", "psnr", "ssim", "lpips", "RMSE ATE", "FPS"]
+            metrics_table = wandb.Table(columns=columns)
             metrics_table.add_data(
-                "After",
+                "Final",
                 rendering_result["mean_psnr"],
                 rendering_result["mean_ssim"],
                 rendering_result["mean_lpips"],
@@ -179,7 +156,10 @@ class SLAM:
                 FPS,
             )
             wandb.log({"Metrics": metrics_table})
-            save_gaussians(self.gaussians, self.save_dir, "final_after_opt", final=True)
+            save_gaussians(self.gaussians, self.save_dir, "final", final=True)
+
+        Log("Total time", start.elapsed_time(end) * 0.001, tag="Eval")
+        Log("Total FPS", FPS, tag="Eval")
 
         backend_queue.put(["stop"])
         backend_process.join()

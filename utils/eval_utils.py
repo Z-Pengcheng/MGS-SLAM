@@ -124,19 +124,17 @@ def eval_rendering(
     iteration="final",
 ):
     img_pred, img_gt = [], []
-    psnr_array, ssim_array, lpips_array, rel_depth_array = [], [], [], []
+    psnr_array, ssim_array, lpips_array = [], [], []
     cal_lpips = LearnedPerceptualImagePatchSimilarity(
         net_type="alex", normalize=True
     ).to("cuda")
     for idx in kf_indices:
         frame = frames[idx]
-        gt_image, gt_depth, _ = dataset[idx]
+        gt_image, _, _ = dataset[idx]
 
         render_result = render(frame, gaussians, pipe, background)
         rendering = render_result["render"]
-        depth = render_result["depth"]
         image = torch.clamp(rendering, 0.0, 1.0)
-        gt_depth = torch.from_numpy(gt_depth)
 
         gt = (gt_image.cpu().numpy().transpose((1, 2, 0)) * 255).astype(np.uint8)
         pred = (image.detach().cpu().numpy().transpose((1, 2, 0)) * 255).astype(
@@ -152,21 +150,17 @@ def eval_rendering(
         psnr_score = psnr((image[mask]).unsqueeze(0), (gt_image[mask]).unsqueeze(0))
         ssim_score = ssim((image).unsqueeze(0), (gt_image).unsqueeze(0))
         lpips_score = cal_lpips((image).unsqueeze(0), (gt_image).unsqueeze(0))
-        rel_depth_score = rel_depth(depth, gt_depth)
-
         psnr_array.append(psnr_score.item())
         ssim_array.append(ssim_score.item())
         lpips_array.append(lpips_score.item())
-        rel_depth_array.append(rel_depth_score.item())
 
     output = dict()
     output["mean_psnr"] = float(np.mean(psnr_array))
     output["mean_ssim"] = float(np.mean(ssim_array))
     output["mean_lpips"] = float(np.mean(lpips_array))
-    output["mean_rel_depth"] = float(np.mean(rel_depth_array))
 
     Log(
-        f'mean psnr: {output["mean_psnr"]}, ssim: {output["mean_ssim"]}, lpips: {output["mean_lpips"]}, rel_depth: {output["mean_rel_depth"]}',
+        f'mean psnr: {output["mean_psnr"]}, ssim: {output["mean_ssim"]}, lpips: {output["mean_lpips"]}',
         tag="Eval",
     )
 
@@ -184,32 +178,6 @@ def eval_rendering(
         cv2.imwrite(os.path.join(psnr_save_dir, "gt_"+str(i).zfill(4)+".jpg"), img_gt[i])
 
     return output
-
-
-def rel_depth(depth, gt_depth):
-    gt_depth = gt_depth.unsqueeze(0)
-    gt_depth = gt_depth.cuda()
-
-    depth_max = torch.max(depth)
-    depth_min = torch.min(depth)
-    depth_median = torch.median(depth)
-    gt_depth_max = torch.max(gt_depth)
-    gt_depth_min = torch.min(gt_depth)
-    gt_depth_median = torch.median(gt_depth)
-
-    # alpha = (gt_depth_max - gt_depth_min) / (depth_max - depth_min)
-    # beta = gt_depth_max - alpha * depth_max
-    # depth = alpha * depth + beta
-
-    # ratio = gt_depth_median / depth_median
-    # depth = ratio * depth
-
-    mask = gt_depth > 0
-
-    rel_depth_loss = torch.abs(depth - gt_depth) / depth
-    rel_depth_loss *= mask
-
-    return rel_depth_loss.mean()
 
 
 def save_gaussians(gaussians, name, iteration, final=False):
