@@ -4,7 +4,7 @@
 
 <h3 align="center"><a href="https://ieeexplore.ieee.org/document/10679906/">Paper</a> | <a href="https://arxiv.org/abs/2405.06241">ArXiv</a> | <a href="https://www.bilibili.com/video/BV1zM4m1C761">Bilibili</a> | <a href="https://youtu.be/twwELF3LgZs">YouTube</a></h3>
 
-<p align="center"><video src="media/MGS-SLAM.mp4" controls width="800"></video></p>
+<p align="center"><img src="media/MGS-SLAM.gif" width="700" alt="MGS-SLAM demo"></p>
 
 MGS-SLAM is a monocular dense SLAM system that jointly optimizes sparse visual odometry and a 3D Gaussian scene representation. A fast multi-view stereo network estimates depth over visual odometry keyframe windows to guide mapping. Depth smooth regularization and Sparse-Dense Adjustment Ring (SDAR) improve geometric consistency and maintain a consistent scale between tracking and mapping.
 
