@@ -4,17 +4,11 @@ import os
 
 import cv2
 import numpy as np
-import pandas as pd 
 import torch
 import trimesh
 from PIL import Image
 
 from gaussian_splatting.utils.graphics_utils import focal2fov
-
-try:
-    import pyrealsense2 as rs
-except Exception:
-    pass
 
 
 class ReplicaParser:
@@ -123,89 +117,46 @@ class TUMParser:
             self.frames.append(frame)
 
 
-class ScannetParser:
-    def __init__(self, input_folder):
-        self.input_folder = input_folder
-        self.color_paths = sorted(glob.glob(f"{self.input_folder}/color/*.jpg"), key=lambda x: int(x.split('/')[-1].rstrip('.jpg')))
-        self.depth_paths = sorted(glob.glob(f"{self.input_folder}/depth/*.png"), key=lambda x: int(x.split('/')[-1].rstrip('.png')))
-        self.pose_paths = sorted(glob.glob(f"{self.input_folder}/pose/*.txt"), key=lambda x: int(x.split('/')[-1].rstrip('.txt')))
-        self.n_img = len(self.color_paths)
-        self.load_poses()
-
-    def load_poses(self):
-        self.poses = []
-        frames = []
-        for i in range(self.n_img):
-            pose = np.loadtxt(self.pose_paths[i])
-            pose = np.linalg.inv(pose)
-            self.poses.append(pose)
-            frame = {
-                "file_path": self.color_paths[i],
-                "depth_path": self.depth_paths[i],
-                "transform_matrix": pose.tolist(),
-            }
-
-            frames.append(frame)
-        self.frames = frames
-
-
-class ScannetPPParser:
-    def __init__(self, input_folder):
-        self.input_folder = input_folder
-        self.color_paths = sorted(glob.glob(f"{self.input_folder}/iphone/rgb/frame*.jpg"))
-        self.depth_paths = sorted(glob.glob(f"{self.input_folder}/iphone/depth/frame*.png"))
-        self.n_img = len(self.color_paths)
-        self.load_poses(f"{self.input_folder}/iphone/pose_intrinsic_imu.json")
-
-    def load_poses(self, path):
-        self.poses = []
-        frames = []
-
-        pose_data = pd.read_json(path)
-        for i in range(self.n_img):
-            pose = np.array(pose_data['frame_'+str(i).zfill(6)]['pose'])
-            pose = np.linalg.inv(pose)
-            self.poses.append(pose)
-            frame = {
-                "file_path": self.color_paths[i],
-                "depth_path": self.depth_paths[i],
-                "transform_matrix": pose.tolist(),
-            }
-
-            frames.append(frame)
-        self.frames = frames
-
-
 class ICL_NUIMParser:
     def __init__(self, input_folder):
         self.input_folder = input_folder
-        self.color_paths = sorted(glob.glob(f"{self.input_folder}/rgb/*.png"), key=lambda x: int(x.split('/')[-1].rstrip('.png')))
-        self.depth_paths = sorted(glob.glob(f"{self.input_folder}/depth/*.png"), key=lambda x: int(x.split('/')[-1].rstrip('.png')))
-        self.n_img = len(self.color_paths)
+        self.color_paths = {
+            int(os.path.splitext(os.path.basename(path))[0]): path
+            for path in glob.glob(f"{self.input_folder}/rgb/*.png")
+        }
+        self.depth_paths = {
+            int(os.path.splitext(os.path.basename(path))[0]): path
+            for path in glob.glob(f"{self.input_folder}/depth/*.png")
+        }
         self.load_poses(glob.glob(f"{self.input_folder}/*.gt.freiburg")[0])
 
     def load_poses(self, path):
-        self.poses = []
-        frames = []
+        pose_data = {int(row[0]): row for row in np.atleast_2d(np.loadtxt(path))}
+        frame_ids = sorted(self.color_paths.keys() & self.depth_paths.keys() & pose_data.keys())
+        if not frame_ids:
+            raise ValueError(f"No matching RGB, depth, and pose frames in {self.input_folder}")
 
-        pose_data = np.loadtxt(path)
-        for i in range(self.n_img):
-            pose_vecs = np.array(pose_data[i])
+        color_paths = self.color_paths
+        depth_paths = self.depth_paths
+        self.color_paths = [color_paths[i] for i in frame_ids]
+        self.depth_paths = [depth_paths[i] for i in frame_ids]
+        self.n_img = len(frame_ids)
+        self.poses = []
+        self.frames = []
+        for i in frame_ids:
+            pose_vecs = pose_data[i]
             quat = pose_vecs[4:]
             trans = pose_vecs[1:4]
             T = trimesh.transformations.quaternion_matrix(np.roll(quat, 1))
             T[:3, 3] = trans
             T = np.linalg.inv(T)
             self.poses.append(T)
-            frame = {
-                "file_path": self.color_paths[i],
-                "depth_path": self.depth_paths[i],
+            self.frames.append({
+                "file_path": color_paths[i],
+                "depth_path": depth_paths[i],
                 "transform_matrix": T.tolist(),
-            }
+            })
 
-            frames.append(frame)
-        self.frames = frames
-    
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, args, path, config):
@@ -317,28 +268,6 @@ class ReplicaDataset(MonocularDataset):
         self.poses = parser.poses
 
 
-class ScannetDataset(MonocularDataset):
-    def __init__(self, args, path, config):
-        super().__init__(args, path, config)
-        dataset_path = config["Dataset"]["dataset_path"]
-        parser = ScannetParser(dataset_path)
-        self.num_imgs = parser.n_img
-        self.color_paths = parser.color_paths
-        self.depth_paths = parser.depth_paths
-        self.poses = parser.poses
-
-
-class ScannetPPDataset(MonocularDataset):
-    def __init__(self, args, path, config):
-        super().__init__(args, path, config)
-        dataset_path = config["Dataset"]["dataset_path"]
-        parser = ScannetPPParser(dataset_path)
-        self.num_imgs = parser.n_img
-        self.color_paths = parser.color_paths
-        self.depth_paths = parser.depth_paths
-        self.poses = parser.poses
-
-
 class ICL_NUIMDataset(MonocularDataset):
     def __init__(self, args, path, config):
         super().__init__(args, path, config)
@@ -350,79 +279,12 @@ class ICL_NUIMDataset(MonocularDataset):
         self.poses = parser.poses
 
 
-class RealsenseDataset(BaseDataset):
-    def __init__(self, args, path, config):
-        super().__init__(args, path, config)
-        self.pipeline = rs.pipeline()
-        self.h, self.w = 720, 1280
-        self.config = rs.config()
-        self.config.enable_stream(rs.stream.color, self.w, self.h, rs.format.bgr8, 30)
-        self.profile = self.pipeline.start(self.config)
-
-        self.rgb_sensor = self.profile.get_device().query_sensors()[1]
-        self.rgb_sensor.set_option(rs.option.enable_auto_exposure, False)
-        # rgb_sensor.set_option(rs.option.enable_auto_white_balance, True)
-        self.rgb_sensor.set_option(rs.option.enable_auto_white_balance, False)
-        self.rgb_sensor.set_option(rs.option.exposure, 200)
-        self.rgb_profile = rs.video_stream_profile(
-            self.profile.get_stream(rs.stream.color)
-        )
-
-        self.rgb_intrinsics = self.rgb_profile.get_intrinsics()
-
-        self.fx = self.rgb_intrinsics.fx
-        self.fy = self.rgb_intrinsics.fy
-        self.cx = self.rgb_intrinsics.ppx
-        self.cy = self.rgb_intrinsics.ppy
-        self.width = self.rgb_intrinsics.width
-        self.height = self.rgb_intrinsics.height
-        self.fovx = focal2fov(self.fx, self.width)
-        self.fovy = focal2fov(self.fy, self.height)
-        self.K = np.array(
-            [[self.fx, 0.0, self.cx], [0.0, self.fy, self.cy], [0.0, 0.0, 1.0]]
-        )
-
-        self.disorted = True
-        self.dist_coeffs = np.asarray(self.rgb_intrinsics.coeffs)
-        self.map1x, self.map1y = cv2.initUndistortRectifyMap(
-            self.K, self.dist_coeffs, np.eye(3), self.K, (self.w, self.h), cv2.CV_32FC1
-        )
-
-        # depth parameters
-        self.has_depth = False
-        self.depth_scale = None
-
-    def __getitem__(self, idx):
-        pose = torch.eye(4, device=self.device, dtype=self.dtype)
-
-        frameset = self.pipeline.wait_for_frames()
-        rgb_frame = frameset.get_color_frame()
-        image = np.asanyarray(rgb_frame.get_data())
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        if self.disorted:
-            image = cv2.remap(image, self.map1x, self.map1y, cv2.INTER_LINEAR)
-
-        image = (
-            torch.from_numpy(image / 255.0)
-            .clamp(0.0, 1.0)
-            .permute(2, 0, 1)
-            .to(device=self.device, dtype=self.dtype)
-        )
-        return image, None, pose
-
-
 def load_dataset(args, path, config):
     if config["Dataset"]["type"] == "tum":
         return TUMDataset(args, path, config)
     elif config["Dataset"]["type"] == "replica":
         return ReplicaDataset(args, path, config)
-    elif config["Dataset"]["type"] == "scannet":
-        return ScannetDataset(args, path, config)
-    elif config["Dataset"]["type"] == "scannetpp":
-        return ScannetPPDataset(args, path, config)
     elif config["Dataset"]["type"] == "icl_nuim":
         return ICL_NUIMDataset(args, path, config)
-    elif config["Dataset"]["type"] == "realsense":
-        return RealsenseDataset(args, path, config)
     else:
         raise ValueError("Unknown dataset type")

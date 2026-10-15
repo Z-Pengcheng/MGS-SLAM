@@ -24,8 +24,6 @@ class BackEnd(mp.Process):
         self.cameras_extent = None
         self.frontend_queue = None
         self.backend_queue = None
-        self.live_mode = False
-
         self.pause = False
         self.device = "cuda"
         self.dtype = torch.float32
@@ -444,7 +442,7 @@ class BackEnd(mp.Process):
                             frames_to_optimize = (
                                 self.config["Training"]["window_size"] - 1
                             )
-                            iter_per_kf = 50 if self.live_mode else 300
+                            iter_per_kf = 300
                             Log("Performing initial BA for initialization")
                         else:
                             iter_per_kf = self.mapping_itr_num

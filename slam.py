@@ -40,12 +40,9 @@ class SLAM:
             pipeline_params,
         )
 
-        self.live_mode = self.config["Dataset"]["type"] == "realsense"
         self.monocular = self.config["Dataset"]["sensor_type"] == "monocular"
         self.use_spherical_harmonics = self.config["Training"]["spherical_harmonics"]
         self.use_gui = self.config["Results"]["use_gui"]
-        if self.live_mode:
-            self.use_gui = True
         self.eval_rendering = self.config["Results"]["eval_rendering"]
 
         model_params.sh_degree = 3 if self.use_spherical_harmonics else 0
@@ -88,8 +85,6 @@ class SLAM:
         self.backend.opt_params = self.opt_params
         self.backend.frontend_queue = frontend_queue
         self.backend.backend_queue = backend_queue
-        self.backend.live_mode = self.live_mode
-
         self.backend.set_hyperparams()
 
         self.params_gui = gui_utils.ParamsGUI(
