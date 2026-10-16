@@ -82,11 +82,12 @@ This work incorporates many open-source codes. We extend our gratitude to the au
 - [Differential Gaussian Rasterization](https://github.com/graphdeco-inria/diff-gaussian-rasterization)
 - [MonoGS](https://github.com/muskie82/MonoGS)
 - [SimpleRecon](https://github.com/nianticlabs/simplerecon)
+- [DPVO](https://github.com/princeton-vl/DPVO)
 
 ## Citation
 
 ```bibtex
-@ARTICLE{10679906,
+@ARTICLE{zhu2024mgs,
   author={Zhu, Pengcheng and Zhuang, Yaoming and Chen, Baoquan and Li, Li and Wu, Chengdong and Liu, Zhanlin},
   journal={IEEE Robotics and Automation Letters},
   title={MGS-SLAM: Monocular Sparse Tracking and Gaussian Mapping With Depth Smooth Regularization},
