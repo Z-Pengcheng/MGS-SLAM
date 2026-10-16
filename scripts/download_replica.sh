@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
 mkdir -p datasets
 cd datasets
 wget https://cvg-data.inf.ethz.ch/nice-slam/data/Replica.zip
